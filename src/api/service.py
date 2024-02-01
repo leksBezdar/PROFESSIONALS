@@ -148,20 +148,24 @@ class FileCRUD:
     
     async def update_file(self, token: str, file_id: str, file_in: schemas.UpdateFile) -> File:
         
-        user_id = await self._get_user_id_from_token(token)          
-        file = await self.get_file(token, file_id)
+        user_id = await self._get_user_id_from_token(token) 
+        file = await self.get_file_metadata(token, file_id)
+                  
+        new_abs_path = await self._rename_file(file_id, token, file_in, file)
+        file_in.file_path = new_abs_path
+        file_update = await FileDAO.update(self.db, and_(File.id == file_id, File.user_id == user_id), obj_in=file_in)
         
+        await self.db.commit()
+        return file_update
+    
+    async def _rename_file(self, file_id: str, user_id: str, file_in: schemas.UpdateFile, file: File) -> str:
+
         old_file_path = await self.path_service.get_file_path(file_id, user_id)
         folder_path = await self.path_service.get_folder_path(file.folder_id, user_id)
         new_abs_path = os.path.join(folder_path, f"{file_in.file_name}.{file.file_extension}")
-        file_in.file_path = new_abs_path
-        
-        file_update = await FileDAO.update(self.db, File.id == file_id, obj_in=file_in)
-        await self.db.commit()
-        
         os.rename(old_file_path, new_abs_path)
         
-        return file_update
+        return new_abs_path
 
     async def delete_file(self, token: str, file_id: str) -> str:
 
