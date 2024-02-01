@@ -71,6 +71,9 @@ class FileCRUD:
             file_name, file_extension = file.filename.split('.')
             file_path = os.path.join(folder_path, f"{file_name}.{file_extension}")
 
+            if await self._check_if_file_exists(file_path):
+                raise exceptions.FileAlreadyExists
+            
             logger.info(f"User {user_id} creates file: {file.filename} into {file_path}")
 
             await self._create_file(file, file_path)
@@ -81,6 +84,10 @@ class FileCRUD:
         except Exception as e:
             logger.opt(exception=e).critical("Error in upload_file")
             raise e
+        
+    async def _check_if_file_exists(self, file_path: str) -> bool:
+        db_file = await FileDAO.find_one_or_none(self.db, File.file_path == file_path)      
+        return db_file
 
     async def _upload_file(self, file_name, file_extension, file_path, user_id, folder_id, file_size) -> File:
         db_file = await FileDAO.add(
@@ -98,7 +105,21 @@ class FileCRUD:
         await self.db.commit()
         return db_file
 
-    async def get_file(self, token: str, file_id: str) -> str:
+    async def get_file_metadata(self, token: str, file_id: str) -> File:
+
+        user_id = await self._get_user_id_from_token(token)
+
+        logger.info(f"User {user_id} gets file {file_id}")
+
+        try:
+            file = await FileDAO.find_one_or_none(self.db, and_(File.user_id == user_id, File.id == file_id))
+            return file
+
+        except Exception as e:
+            logger.opt(exception=e).critical("Error in get_file")
+            raise
+        
+    async def get_file(self, token: str, file_id: str) -> File:
 
         user_id = await self._get_user_id_from_token(token)
 
@@ -124,19 +145,36 @@ class FileCRUD:
         )
         
         return target_files
+    
+    async def update_file(self, token: str, file_id: str, file_in: schemas.UpdateFile) -> File:
+        
+        user_id = await self._get_user_id_from_token(token)          
+        file = await self.get_file(token, file_id)
+        
+        old_file_path = await self.path_service.get_file_path(file_id, user_id)
+        folder_path = await self.path_service.get_folder_path(file.folder_id, user_id)
+        new_abs_path = os.path.join(folder_path, f"{file_in.file_name}.{file.file_extension}")
+        file_in.file_path = new_abs_path
+        
+        file_update = await FileDAO.update(self.db, File.id == file_id, obj_in=file_in)
+        await self.db.commit()
+        
+        os.rename(old_file_path, new_abs_path)
+        
+        return file_update
 
     async def delete_file(self, token: str, file_id: str) -> str:
 
         try:
-            file_path = await self.path_service.get_file_path(file_id)           
             user_id = await self._get_user_id_from_token(token)
+            file_path = await self.path_service.get_file_path(file_id, user_id)           
             logger.info(f"User {user_id} deletes file by file_id: {file_id}")
 
             if os.path.exists(file_path):
                 os.remove(file_path)
                 await self._delete_file_db(user_id, file_path)
                 return {"Message": f"File {file_path} was deleted by user {user_id} successfully"}
-
+            
             return {"Message": f"File {file_id} does not exist"}        
 
         except Exception as e:
@@ -191,8 +229,10 @@ class FolderCRUD:
         parent_folder_path = await self.path_service.get_folder_path(parent_folder_id, user_id)
         folder_path = os.path.join(parent_folder_path, folder_name)
 
-        # Создаем папку, если она не существует
-        os.makedirs(folder_path, exist_ok=False)
+        try: 
+            os.makedirs(folder_path, exist_ok=False)
+        except Exception:
+            raise exceptions.FolderAlreadyExists
 
         return folder_path
 

@@ -125,6 +125,7 @@ class BaseDAO(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             values(**update_data).
             returning(cls.model)
         )
+        
         result = await session.execute(stmt)
 
         return result.scalars().one()

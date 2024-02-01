@@ -1,5 +1,5 @@
-from .models import File, Folder, DeletedFile
-from .schemas import CreateFile, CreateFolder, UpdateFile, UpdateFolder, CreateDeletedFile, UpdateDeletedFile
+from .models import File, Folder
+from .schemas import CreateFile, CreateFolder, UpdateFile, UpdateFolder
 
 from ..dao import BaseDAO
 

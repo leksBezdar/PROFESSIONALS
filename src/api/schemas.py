@@ -17,6 +17,11 @@ class CreateFile(FileBase):
 class UpdateFile(FileBase):
     file_name: str | None = None 
     file_extension: str | None = None 
+    file_path: str | None = None
+    file_size: int | None = None
+    user_id: str | None = None
+    folder_id: int | None = None
+
 
 
 class FolderBase(BaseModel):

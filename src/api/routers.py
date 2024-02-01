@@ -37,6 +37,21 @@ async def create_folder(
     return await folder_crud.create_folder(folder=folder_data, token=token)
 
 
+@router.get("/get_file_metadata/{file_id}")
+async def get_file_metadata(
+    file_id: str,
+    token: str,
+    db: AsyncSession = Depends(get_async_session)
+):
+    
+    file_manager = FileManager(db)
+    file_crud = file_manager.file_crud
+    
+    target_file = await file_crud.get_file_metadata(token=token, file_id=file_id)
+    
+    return target_file
+
+
 @router.get("/get_file/{file_id}")
 async def get_file(
     file_id: str,
@@ -82,6 +97,19 @@ async def get_folder_files(
     
     return await file_crud.get_folder_files(token=token, folder_id=folder_id, limit=limit, offset=offset, order_by=order_by)
 
+
+@router.patch("/update_file")
+async def update_file(
+    token: str, 
+    file_id: str,
+    file_in: schemas.UpdateFile,
+    db: AsyncSession = Depends(get_async_session)
+):
+    
+    file_manager = FileManager(db)
+    file_crud = file_manager.file_crud
+
+    return await file_crud.update_file(token=token, file_in=file_in, file_id=file_id)
     
 @router.delete("/delete_file")
 async def delete_file(
