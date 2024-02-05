@@ -127,6 +127,7 @@ class BaseDAO(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         )
         
         result = await session.execute(stmt)
+        await session.commit()
 
         return result.scalars().one()
 

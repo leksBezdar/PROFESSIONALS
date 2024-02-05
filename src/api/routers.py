@@ -8,7 +8,7 @@ from ..database import get_async_session
 from .service import FileManager
 from . import schemas
 
-router = APIRouter()
+router = APIRouter(prefix="/files")
 
 
 @router.post("/upload_file")
@@ -52,8 +52,8 @@ async def get_file_metadata(
     return target_file
 
 
-@router.get("/get_file/{file_id}")
-async def get_file(
+@router.get("/download_file/{file_id}")
+async def download_file(
     file_id: str,
     token: str,
     db: AsyncSession = Depends(get_async_session)
@@ -97,8 +97,20 @@ async def get_folder_files(
     
     return await file_crud.get_folder_files(token=token, folder_id=folder_id, limit=limit, offset=offset, order_by=order_by)
 
+@router.patch("/share")
+async def share_file(
+    token: str, 
+    file_id: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_async_session)
+):
+    
+    file_manager = FileManager(db)
+    file_crud = file_manager.file_crud
 
-@router.patch("/update_file")
+    return await file_crud.share_file(token, file_id, user_id)
+
+@router.patch("/update_file/{file_id}")
 async def update_file(
     token: str, 
     file_id: str,
@@ -111,7 +123,7 @@ async def update_file(
 
     return await file_crud.update_file(token=token, file_in=file_in, file_id=file_id)
     
-@router.delete("/delete_file")
+@router.delete("/delete_file/{file_id}")
 async def delete_file(
     token: str,
     file_id: str,

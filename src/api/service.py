@@ -166,6 +166,35 @@ class FileCRUD:
         os.rename(old_file_path, new_abs_path)
         
         return new_abs_path
+    
+    async def share_file(self, token: str, file_id: str, user_id: str) -> list:
+        
+        author_id = await self._get_user_id_from_token(token)
+        
+        file = await self.get_file_metadata(token, file_id)
+        auth_manager = DatabaseManager(self.db)
+        user_crud = auth_manager.user_crud
+        user = await user_crud.get_existing_user(user_id=user_id)
+
+        current_accessed_users = file.accessed_users or []
+
+        new_accessed_user = {
+            "id": user.id,
+            "username": user.username, 
+            "email": user.email,
+            "type": "co-author"
+        }
+        
+        if new_accessed_user not in current_accessed_users:
+            current_accessed_users.append(new_accessed_user)
+        else:
+            current_accessed_users.remove(new_accessed_user)
+
+        obj_in = schemas.UpdateFile(accessed_users=current_accessed_users)
+        new_accessed_users = await FileDAO.update(self.db, and_(File.id == file.id, File.user_id == author_id), obj_in=obj_in)
+
+        return new_accessed_users
+
 
     async def delete_file(self, token: str, file_id: str) -> str:
 

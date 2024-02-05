@@ -86,7 +86,6 @@ class UserCRUD:
         return response
 
     async def get_existing_user(self, email: str = None, username: str = None, user_id: str = None, token: str = None) -> User:
-
         if not email and not username and not user_id and not token:
             raise exceptions.NoUserData
 
@@ -97,7 +96,7 @@ class UserCRUD:
             User.email == email,
             User.username == username,
             User.id == user_id))
-
+        
         return user
 
     # Получение списка всех пользователей с поддержкой пагинации

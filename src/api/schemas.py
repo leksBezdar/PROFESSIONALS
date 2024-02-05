@@ -8,6 +8,7 @@ class FileBase(BaseModel):
     file_size: int
     user_id: str
     folder_id: int | None = None
+    accessed_users: list = []
 
 
 class CreateFile(FileBase):
@@ -21,6 +22,7 @@ class UpdateFile(FileBase):
     file_size: int | None = None
     user_id: str | None = None
     folder_id: int | None = None
+    accessed_users: list = []
 
 
 

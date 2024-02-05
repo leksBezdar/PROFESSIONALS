@@ -1,6 +1,7 @@
 from datetime import datetime
-from sqlalchemy import TIMESTAMP, ForeignKey, func
+from sqlalchemy import ARRAY, JSON, TIMESTAMP, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
+
 from ..database import Base
 
 
@@ -15,9 +16,9 @@ class File(Base):
     file_size: Mapped[int] = mapped_column(nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
+    accessed_users: Mapped[list] = mapped_column(ARRAY(JSON), default=[])
     
     folder_id: Mapped[int] = mapped_column(ForeignKey('folders.id', ondelete='CASCADE'), nullable=True)
-    
     
 class Folder(Base):
     __tablename__ = 'folders'

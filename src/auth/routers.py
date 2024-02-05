@@ -12,7 +12,7 @@ from .service import DatabaseManager
 from ..database import get_async_session
 
 
-router = APIRouter()
+router = APIRouter(prefix="/auth")
 
 
 @router.post("/registration/", response_model=schemas.User)

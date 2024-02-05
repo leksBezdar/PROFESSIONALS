@@ -11,8 +11,8 @@ class FileAlreadyExists(HTTPException):
         
 class FolderWasNotFound(HTTPException):
     def __init__(self):
-        super().__init__(status_code=404, detail="Folder was not found")
+        super().__init__(status_code=404, detail="Not found")
         
 class FileWasNotFound(HTTPException):
     def __init__(self):
-        super().__init__(status_code=404, detail="File was not found")
+        super().__init__(status_code=404, detail="Not found")
