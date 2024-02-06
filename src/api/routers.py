@@ -14,7 +14,6 @@ router = APIRouter(prefix="/files")
 @router.post("/upload_file")
 async def upload_file(
     token: str,
-    folder_id: int = None,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_async_session)
     ):
@@ -22,19 +21,7 @@ async def upload_file(
     file_manager = FileManager(db)
     file_crud = file_manager.file_crud
     
-    return await file_crud.upload_file(token=token, file=file, folder_id=folder_id)
-
-@router.post("/create_folder")
-async def create_folder(
-    token: str,
-    folder_data: schemas.CreateFolder,
-    db: AsyncSession = Depends(get_async_session)
-):
-    
-    file_manager = FileManager(db)
-    folder_crud = file_manager.folder_crud
-    
-    return await folder_crud.create_folder(folder=folder_data, token=token)
+    return await file_crud.upload_file(token=token, file=file)
 
 
 @router.get("/get_file_metadata/{file_id}")
@@ -67,36 +54,6 @@ async def download_file(
     return FileResponse(target_file)
 
 
-@router.get("/get_folders")
-async def get_folders(
-    token: str, 
-    folder_id: int = None, 
-    db: AsyncSession = Depends(get_async_session)
-):
-    
-    folder_manager = FileManager(db)
-    folder_crud = folder_manager.folder_crud
-    
-    target_folder = await folder_crud.get_folders(token=token, folder_id=folder_id)
-    
-    return target_folder
-
-
-@router.get("/get_folder_files")
-async def get_folder_files(
-    token: str,
-    folder_id: int = None,
-    order_by: str = None,
-    limit: int = 10,
-    offset: int = 0,
-    db: AsyncSession = Depends(get_async_session)
-):
-        
-    file_manager = FileManager(db)
-    file_crud = file_manager.file_crud
-    
-    return await file_crud.get_folder_files(token=token, folder_id=folder_id, limit=limit, offset=offset, order_by=order_by)
-
 @router.patch("/share")
 async def share_file(
     token: str, 
@@ -109,6 +66,7 @@ async def share_file(
     file_crud = file_manager.file_crud
 
     return await file_crud.share_file(token, file_id, user_id)
+
 
 @router.get("/get_user_files/{user_id}")
 async def get_user_files(
@@ -124,6 +82,7 @@ async def get_user_files(
 
     return await file_crud.get_user_files(token, user_id, limit=limit, offset=offset)
 
+
 @router.get("/get_user_shared_files/{user_id}")
 async def get_user_shared_files(
     token: str, 
@@ -138,6 +97,7 @@ async def get_user_shared_files(
 
     return await file_crud.get_user_shared_files(token, user_id, limit=limit, offset=offset)
 
+
 @router.patch("/update_file/{file_id}")
 async def update_file(
     token: str, 
@@ -151,6 +111,7 @@ async def update_file(
 
     return await file_crud.update_file(token=token, file_in=file_in, file_id=file_id)
     
+    
 @router.delete("/delete_file/{file_id}")
 async def delete_file(
     token: str,
@@ -162,16 +123,3 @@ async def delete_file(
     file_crud = file_manager.file_crud
     
     return await file_crud.delete_file(token, file_id)
-
-
-@router.delete("/delete_folder")
-async def delete_folder(
-    token: str, 
-    folder_id: int, 
-    db: AsyncSession = Depends(get_async_session)
-):
-    
-    file_manager = FileManager(db)
-    folder_crud = file_manager.folder_crud
-
-    return await folder_crud.delete_folder(token, folder_id)

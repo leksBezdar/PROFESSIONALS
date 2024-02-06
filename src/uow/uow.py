@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Type
 
 from ..database import async_session_maker
-from ..api.dao import FileDAO, FolderDAO
+from ..api.dao import FileDAO
 from ..auth.dao import UserDAO, RefreshTokenDAO
 
 
@@ -10,7 +10,6 @@ class IUnitOfWork(ABC):
     users: Type[UserDAO]
     refresh_tokens: Type[RefreshTokenDAO]
     files: Type[FileDAO]
-    folders: Type[FolderDAO]
     
     @abstractmethod
     def __init__(self):
@@ -43,7 +42,6 @@ class UnitOfWork:
         self.users: UserDAO(self.session)
         self.refresh_tokens: RefreshTokenDAO(self.session)
         self.files: FileDAO(self.session)
-        self.folders: FolderDAO(self.session)
 
     async def __aexit__(self, *args):
         await self.rollback()
