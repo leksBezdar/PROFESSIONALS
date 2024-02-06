@@ -110,6 +110,34 @@ async def share_file(
 
     return await file_crud.share_file(token, file_id, user_id)
 
+@router.get("/get_user_files/{user_id}")
+async def get_user_files(
+    token: str, 
+    user_id: str,
+    limit: int = 100, 
+    offset: int = 0,
+    db: AsyncSession = Depends(get_async_session)
+):
+    
+    file_manager = FileManager(db)
+    file_crud = file_manager.file_crud
+
+    return await file_crud.get_user_files(token, user_id, limit=limit, offset=offset)
+
+@router.get("/get_user_shared_files/{user_id}")
+async def get_user_shared_files(
+    token: str, 
+    user_id: str,
+    limit: int = 100, 
+    offset: int = 0,
+    db: AsyncSession = Depends(get_async_session)
+):
+    
+    file_manager = FileManager(db)
+    file_crud = file_manager.file_crud
+
+    return await file_crud.get_user_shared_files(token, user_id, limit=limit, offset=offset)
+
 @router.patch("/update_file/{file_id}")
 async def update_file(
     token: str, 

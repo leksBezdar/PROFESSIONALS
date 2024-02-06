@@ -133,6 +133,29 @@ class FileCRUD:
             logger.opt(exception=e).critical("Error in get_file")
             raise
 
+    async def get_user_files(self, token: str, user_id: str, limit: int, offset: int) -> list[File]:
+        
+        await self._get_user_id_from_token(token)
+        
+        target_files = await FileDAO.find_all(self.db, File.user_id == user_id, limit=limit, offset=offset)
+        
+        return target_files
+    
+    async def get_user_shared_files(self, token: str, user_id: str, limit: int, offset: int) -> list[File]:
+        await self._get_user_id_from_token(token)
+        
+        target_files = await FileDAO.find_all(self.db, limit=limit, offset=offset)
+        
+        result_files = []
+        
+        for file_obj in target_files:
+            accessed_users = file_obj.accessed_users
+            for user_info in accessed_users:
+                if user_info.get("id") == user_id and user_info.get("type") == "co-author":
+                    result_files.append(file_obj)
+                    break
+        return result_files
+
     async def get_folder_files(self, token: str, folder_id: str, limit: int, offset: int, order_by: str) -> list[File]:
 
         user_id = await self._get_user_id_from_token(token)
