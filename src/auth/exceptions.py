@@ -8,7 +8,7 @@ class InvalidCredentials(HTTPException):
 
 class InvalidAuthenthicationCredential(HTTPException):
     def __init__(self):
-        super().__init__(status_code=401, detail="Invalid authentication credential")
+        super().__init__(status_code=401, detail="Login failed")
 
 
 class InvalidToken(HTTPException):
