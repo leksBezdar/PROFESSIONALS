@@ -14,14 +14,14 @@ router = APIRouter(prefix="/files")
 @router.post("/upload_file")
 async def upload_file(
     token: str,
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_async_session)
-    ):
+):
     
     file_manager = FileManager(db)
     file_crud = file_manager.file_crud
     
-    return await file_crud.upload_file(token=token, file=file)
+    return await file_crud.upload_file(token=token, files=files)
 
 
 @router.get("/get_file_metadata/{file_id}")

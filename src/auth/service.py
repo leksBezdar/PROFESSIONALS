@@ -74,16 +74,9 @@ class UserCRUD:
         if refresh_session:
             await RefreshTokenDAO.delete(self.db, id=refresh_session.id)
 
-        response = JSONResponse(content={
-            "message": "logout successful",
-        })
-
-        response.delete_cookie(key="access_token")
-        response.delete_cookie(key="refresh_token")
-
         await self.db.commit()
 
-        return response
+        return {"success": True, "message": "Logout"}
 
     async def get_existing_user(self, email: str = None, username: str = None, user_id: str = None, token: str = None) -> User:
         if not email and not username and not user_id and not token:

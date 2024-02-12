@@ -6,8 +6,6 @@ from fastapi import UploadFile
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.models import User
-
 from .models import File
 
 from . import schemas, exceptions
@@ -46,111 +44,40 @@ class PathService:
                 os.makedirs(folder)
 
 
-import os
-
 class FileCRUD:
 
     def __init__(self, db: AsyncSession, path_service: PathService):
         self.db = db
         self.path_service = path_service
 
-    async def upload_file(self, token: str, file: UploadFile) -> File:
-
+    async def upload_file(self, token: str, files: list[UploadFile]) -> list[File]:
         try:
             user_id = await self._get_user_id_from_token(token)
             await self.path_service.ensure_upload_folder_exists(user_id)
-            
-            folder_path = await self.path_service.get_folder_path(user_id)
-            file_name, file_extension = os.path.splitext(file.filename)
-            original_file_path = os.path.join(folder_path, f"{file_name}{file_extension}")
-            file_path = original_file_path
+            files_to_response = []
+            for file in files:
+                file_name, file_extension = os.path.splitext(file.filename)
+                try:
+                    folder_path = await self.path_service.get_folder_path(user_id)
+                    original_file_path = os.path.join(folder_path, f"{file_name}{file_extension}")
+                    file_path = original_file_path
 
-            # Check if the file exists, if so, rename it with an incremental number
-            i = 1
-            while await self._check_if_file_exists(file_path):
-                new_file_name = f"{file_name} ({i}){file_extension}"
-                file_path = os.path.join(folder_path, new_file_name)
-                i += 1
+                    i = 1
+                    while await self._check_if_file_exists(file_path):
+                        new_file_name = f"{file_name}({i}){file_extension}"
+                        file_path = os.path.join(folder_path, new_file_name)
+                        i += 1
 
-            logger.info(f"User {user_id} creates file: {file.filename} into {file_path}")
+                    logger.info(f"User {user_id} creates file: {file.filename} into {file_path}")
 
-            await self._create_file(file, file_path)
-            db_file = await self._upload_file(file_name, file_extension, file_path, user_id, file.size)
+                    await self._create_file(file, file_path)
+                    db_file = await self._upload_file(file_extension, file_path, user_id, file.size)
+                    files_to_response.append(db_file)
+                    
+                except Exception as e:
+                    files_to_response.append({"success": False, "message": "File not loaded", "name": file_name})
 
-            return db_file
-
-        except Exception as e:
-            logger.opt(exception=e).critical("Error in upload_file")
-            raise e
-        
-    async def _set_accessed_users(self, user_id: str) -> list:
-        
-        db_manager = DatabaseManager(self.db)
-        user_crud = db_manager.user_crud
-        user = await user_crud.get_existing_user(user_id=user_id)
-        
-        new_accessed_user = [{
-            "id": user.id,
-            "username": user.username, 
-            "email": user.email,
-            "type": "author"
-        }]
-        return new_accessed_user
-        
-    async def _check_if_file_exists(self, file_path: str) -> bool:
-        db_file = await FileDAO.find_one_or_none(self.db, File.file_path == file_path)      
-        return db_file
-
-    async def _upload_file(self, file_name, file_extension, file_path, user_id, file_size) -> File:
-        
-        accessed_users = await self._set_accessed_users(user_id)
-        
-        db_file = await FileDAO.add(
-            self.db,
-            schemas.CreateFile(
-                id=await get_unique_id(),
-                file_name=file_name,
-                file_extension=file_extension,
-                file_path=file_path,
-                file_size=file_size,
-                user_id=user_id,
-                accessed_users=accessed_users       
-            )
-        )
-        await self.db.commit()
-        return db_file
-import os
-
-class FileCRUD:
-
-    def __init__(self, db: AsyncSession, path_service: PathService):
-        self.db = db
-        self.path_service = path_service
-
-    async def upload_file(self, token: str, file: UploadFile) -> File:
-
-        try:
-            user_id = await self._get_user_id_from_token(token)
-            await self.path_service.ensure_upload_folder_exists(user_id)
-            
-            folder_path = await self.path_service.get_folder_path(user_id)
-            file_name, file_extension = os.path.splitext(file.filename)
-            original_file_path = os.path.join(folder_path, f"{file_name}{file_extension}")
-            file_path = original_file_path
-
-            i = 1
-            while await self._check_if_file_exists(file_path):
-                new_file_name = f"{file_name}({i}){file_extension}"
-                file_path = os.path.join(folder_path, new_file_name)
-                i += 1
-
-            logger.info(f"User {user_id} creates file: {file.filename} into {file_path}")
-
-            await self._create_file(file, file_path)
-            db_file = await self._upload_file(file_name, file_extension, file_path, user_id, file.size)
-
-            return db_file
-
+            return files_to_response
         except Exception as e:
             logger.opt(exception=e).critical("Error in upload_file")
             raise e
@@ -249,7 +176,7 @@ class FileCRUD:
         
         user_id = await self._get_user_id_from_token(token) 
         file = await self.get_file_metadata(token, file_id)
-                  
+       
         new_abs_path = await self._rename_file(file_id, user_id, file_in, file)
         file_in.file_path = new_abs_path
         file_update = await FileDAO.update(self.db, and_(File.id == file_id, File.user_id == user_id), obj_in=file_in)
