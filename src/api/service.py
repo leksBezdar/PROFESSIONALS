@@ -4,31 +4,27 @@ from loguru import logger
 
 from fastapi import UploadFile
 from sqlalchemy import and_
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from .models import File
 
 from . import schemas, exceptions
-from .dao import FileDAO
-from .config import ROOT_DIR, UPLOAD_DIR
 
-from ..auth.service import DatabaseManager
-from ..utils import get_unique_id
+from .dao import FileDAO
+from .models import File
+
+from ..config import settings
+from ..auth.service import UserService
+
 
 
 class PathService:
 
-    def __init__(self, db: AsyncSession):
-        self.db = db
-        self.root_path = f"{ROOT_DIR}{UPLOAD_DIR}"
+    def __init__(self):
+        self.root_path = f"{settings.ROOT_DIR}{settings.UPLOAD_DIR}"
 
     async def get_folder_path(self, user_id: str) -> str:
-
         return os.path.join(self.root_path, user_id)
-
     
     async def get_file_path(self, file_id: int, user_id: str) -> str:
-        file = await FileDAO.find_one_or_none(self.db, and_(File.user_id == user_id, File.id == file_id))
+        file = await FileDAO.find_one_or_none(and_(File.user_id == user_id, File.id == file_id))
         if not file:
             raise exceptions.FileWasNotFound
         
@@ -36,7 +32,7 @@ class PathService:
     
     @staticmethod
     async def ensure_upload_folder_exists(user_id: str) -> None:
-        upload_folder = os.path.join(ROOT_DIR, UPLOAD_DIR)
+        upload_folder = os.path.join(settings.ROOT_DIR, settings.UPLOAD_DIR)
         user_folder = os.path.join(upload_folder, user_id)
 
         for folder in [upload_folder, user_folder]:
@@ -46,8 +42,7 @@ class PathService:
 
 class FileCRUD:
 
-    def __init__(self, db: AsyncSession, path_service: PathService):
-        self.db = db
+    def __init__(self, path_service: PathService):
         self.path_service = path_service
 
     async def upload_file(self, token: str, files: list[UploadFile]) -> list[File]:
@@ -84,12 +79,10 @@ class FileCRUD:
         
     async def _set_accessed_users(self, user_id: str) -> list:
         
-        db_manager = DatabaseManager(self.db)
-        user_crud = db_manager.user_crud
-        user = await user_crud.get_existing_user(user_id=user_id)
+        user = await UserService.get_user(user_id=user_id)
         
         new_accessed_user = [{
-            "id": user.id,
+            "id": str(user.id),
             "username": user.username, 
             "email": user.email,
             "type": "author"
@@ -97,7 +90,7 @@ class FileCRUD:
         return new_accessed_user
         
     async def _check_if_file_exists(self, file_path: str) -> bool:
-        db_file = await FileDAO.find_one_or_none(self.db, File.file_path == file_path)      
+        db_file = await FileDAO.find_one_or_none(File.file_path == file_path)      
         return db_file
 
     async def _upload_file(self, file_extension, file_path, user_id, file_size) -> File:
@@ -107,9 +100,7 @@ class FileCRUD:
         unique_file_name = os.path.basename(file_path)
 
         db_file = await FileDAO.add(
-            self.db,
             schemas.CreateFile(
-                id=await get_unique_id(),
                 file_name=unique_file_name,
                 file_extension=file_extension,
                 file_path=file_path,
@@ -118,7 +109,6 @@ class FileCRUD:
                 accessed_users=accessed_users       
             )
         )
-        await self.db.commit()
         return db_file
 
     async def get_file_metadata(self, token: str, file_id: str) -> File:
@@ -128,7 +118,7 @@ class FileCRUD:
         logger.info(f"User {user_id} gets file {file_id}")
 
         try:
-            file = await FileDAO.find_one_or_none(self.db, and_(File.user_id == user_id, File.id == file_id))
+            file = await FileDAO.find_one_or_none(and_(File.user_id == user_id, File.id == file_id))
             return file
 
         except Exception as e:
@@ -153,14 +143,14 @@ class FileCRUD:
         
         await self._get_user_id_from_token(token)
         
-        target_files = await FileDAO.find_all(self.db, File.user_id == user_id, limit=limit, offset=offset)
+        target_files = await FileDAO.find_all(File.user_id == user_id, limit=limit, offset=offset)
         
         return target_files
     
     async def get_user_shared_files(self, token: str, user_id: str, limit: int, offset: int) -> list[File]:
         await self._get_user_id_from_token(token)
         
-        target_files = await FileDAO.find_all(self.db, limit=limit, offset=offset)
+        target_files = await FileDAO.find_all(limit=limit, offset=offset)
         
         result_files = []
         
@@ -179,9 +169,7 @@ class FileCRUD:
        
         new_abs_path = await self._rename_file(file_id, user_id, file_in, file)
         file_in.file_path = new_abs_path
-        file_update = await FileDAO.update(self.db, and_(File.id == file_id, File.user_id == user_id), obj_in=file_in)
-        
-        await self.db.commit()
+        file_update = await FileDAO.update(and_(File.id == file_id, File.user_id == user_id), obj_in=file_in)
         
         return file_update
     
@@ -199,14 +187,12 @@ class FileCRUD:
         author_id = await self._get_user_id_from_token(token)
         
         file = await self.get_file_metadata(token, file_id)
-        auth_manager = DatabaseManager(self.db)
-        user_crud = auth_manager.user_crud
-        user = await user_crud.get_existing_user(user_id=user_id)
+        user = await UserService.get_user(user_id=user_id)
 
         current_accessed_users = file.accessed_users or []
 
         new_accessed_user = {
-            "id": user.id,
+            "id": str(user.id),
             "username": user.username, 
             "email": user.email,
             "type": "co-author"
@@ -218,7 +204,7 @@ class FileCRUD:
             current_accessed_users.remove(new_accessed_user)
 
         obj_in = schemas.UpdateFile(accessed_users=current_accessed_users)
-        new_accessed_users = await FileDAO.update(self.db, and_(File.id == file.id, File.user_id == author_id), obj_in=obj_in)
+        new_accessed_users = await FileDAO.update(and_(File.id == file.id, File.user_id == author_id), obj_in=obj_in)
 
         return new_accessed_users
 
@@ -243,15 +229,11 @@ class FileCRUD:
         
     async def _delete_file_db(self, user_id: str, file_path: str) -> None:
         
-        await FileDAO.delete(self.db, and_(user_id == File.user_id, file_path == File.file_path))
-        await self.db.commit()
+        await FileDAO.delete(and_(user_id == File.user_id, file_path == File.file_path))
 
     async def _get_user_id_from_token(self, token: str):
 
-        db_manager = DatabaseManager(self.db)
-        token_service = db_manager.token_crud
-
-        user_id = await token_service.get_access_token_payload(token)
+        user_id = await UserService._get_access_token_payload(token)
         return user_id
 
     @staticmethod
@@ -261,10 +243,6 @@ class FileCRUD:
             f.write(content)          
 
 class FileManager:
-    def __init__(self, db: AsyncSession):
-        self.db = db
-        self._path_service = PathService(db)
-        self.file_crud = FileCRUD(db, self._path_service)
-
-    async def commit(self):
-        await self.db.commit()
+    def __init__(self):
+        self._path_service = PathService()
+        self.file_crud = FileCRUD(self._path_service)
