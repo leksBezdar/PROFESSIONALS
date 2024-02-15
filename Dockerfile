@@ -1,4 +1,4 @@
-FROM python:3.11.4-slim
+FROM python:3.11
 
 RUN mkdir /fastapi_app
 
@@ -10,4 +10,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD gunicorn src.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker
+CMD alembic upgrade head && gunicorn -b 0.0.0.0:8000 src.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker

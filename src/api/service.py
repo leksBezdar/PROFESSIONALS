@@ -71,7 +71,9 @@ class FileCRUD:
                     files_to_response.append(db_file)
                     
                 except Exception as e:
-                    files_to_response.append({"success": False, "message": "File not loaded", "name": file_name})
+                     with open("errors.txt", "a+") as f:
+                         f.write(str(e) + "\n")                    
+                     files_to_response.append({"success": False, "message": "File not loaded", "name": file_name})
 
             return files_to_response
         except Exception as e:
@@ -185,7 +187,7 @@ class FileCRUD:
 
         old_file_path = await self.path_service.get_file_path(file_id, user_id)
         folder_path = await self.path_service.get_folder_path(user_id)
-        new_abs_path = os.path.join(folder_path, f"{file_in.file_name}.{file.file_extension}")
+        new_abs_path = os.path.join(folder_path, f"{file_in.file_name}{file.file_extension}")
         os.rename(old_file_path, new_abs_path)
         
         return new_abs_path

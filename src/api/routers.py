@@ -22,7 +22,6 @@ async def upload_files(
         message="Success",
         response=await file_crud.upload_file(token=token, files=files))
 
-
 @router.get("/get_file_metadata/{file_id}")
 async def get_file_metadata(
     file_id: str,
