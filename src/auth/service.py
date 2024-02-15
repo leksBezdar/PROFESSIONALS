@@ -122,7 +122,7 @@ class AuthService:
                 expires_in=refresh_token_expires.total_seconds()
             )
         )
-        return schemas.Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+        return schemas.Token(access_token=access_token, refresh_token=refresh_token)
     
     @staticmethod
     async def __create_access_token(user_id: uuid.UUID, **kwargs) -> str:
@@ -134,7 +134,7 @@ class AuthService:
         to_encode.update(**kwargs)
         encoded_jwt = jwt.encode(to_encode, settings.TOKEN_SECRET_KEY, algorithm=settings.ALGORITHM)
 
-        return f'Bearer {encoded_jwt}'
+        return f'{encoded_jwt}'
     
     @classmethod
     async def __create_refresh_token(cls) -> uuid.UUID:
@@ -167,7 +167,7 @@ class AuthService:
             )
         )
         
-        return schemas.Token(access_token=access_token, refresh_token=new_refresh_token, token_type="bearer")
+        return schemas.Token(access_token=access_token, refresh_token=new_refresh_token)
     
     @classmethod
     async def authenticate_user(cls, username: str, password: str) -> models.User:

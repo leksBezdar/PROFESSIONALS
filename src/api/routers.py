@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, UploadFile, File
 
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from .service import FileManager
 from . import schemas
@@ -10,7 +9,7 @@ router = APIRouter(prefix="/files")
 
 
 @router.post("/upload_file")
-async def upload_file(
+async def upload_files(
     token: str,
     files: list[UploadFile] = File(...)
 ):
@@ -18,7 +17,10 @@ async def upload_file(
     file_manager = FileManager()
     file_crud = file_manager.file_crud
     
-    return await file_crud.upload_file(token=token, files=files)
+    return schemas.UploadResponse(
+        success=True,
+        message="Success",
+        response=await file_crud.upload_file(token=token, files=files))
 
 
 @router.get("/get_file_metadata/{file_id}")
@@ -32,7 +34,7 @@ async def get_file_metadata(
     
     target_file = await file_crud.get_file_metadata(token=token, file_id=file_id)
     
-    return target_file
+    return schemas.MetadataResponse(success=True, message="File_metadata", response=target_file)
 
 
 @router.get("/download_file/{file_id}")
@@ -100,8 +102,11 @@ async def update_file(
     file_manager = FileManager()
     file_crud = file_manager.file_crud
 
-    return await file_crud.update_file(token=token, file_in=file_in, file_id=file_id)
-    
+    return schemas.UpdateResponse(
+        success=True,
+        message="Renamed",
+        response=await file_crud.update_file(token=token, file_in=file_in, file_id=file_id)
+    )
     
 @router.delete("/delete_file/{file_id}")
 async def delete_file(
@@ -112,4 +117,6 @@ async def delete_file(
     file_manager = FileManager()
     file_crud = file_manager.file_crud
     
-    return await file_crud.delete_file(token, file_id)
+    await file_crud.delete_file(token, file_id)
+    
+    return schemas.DeleteResponse(success=True, message="File was deleted successfuly")

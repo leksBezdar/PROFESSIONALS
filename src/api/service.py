@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from loguru import logger
 
@@ -101,11 +102,12 @@ class FileCRUD:
 
         db_file = await FileDAO.add(
             schemas.CreateFile(
+                id=str(uuid.uuid4()),
                 file_name=unique_file_name,
                 file_extension=file_extension,
                 file_path=file_path,
                 file_size=file_size,
-                user_id=user_id,
+                user_id=str(user_id),
                 accessed_users=accessed_users       
             )
         )
@@ -114,12 +116,13 @@ class FileCRUD:
     async def get_file_metadata(self, token: str, file_id: str) -> File:
 
         user_id = await self._get_user_id_from_token(token)
-
         logger.info(f"User {user_id} gets file {file_id}")
 
         try:
             file = await FileDAO.find_one_or_none(and_(File.user_id == user_id, File.id == file_id))
-            return file
+            if file: 
+                return file
+            raise exceptions.FileWasNotFound
 
         except Exception as e:
             logger.opt(exception=e).critical("Error in get_file")
@@ -133,7 +136,9 @@ class FileCRUD:
 
         try:
             target_file = await self.path_service.get_file_path(file_id, user_id)
-            return target_file
+            if target_file:
+                return target_file
+            raise exceptions.FileWasNotFound
 
         except Exception as e:
             logger.opt(exception=e).critical("Error in get_file")
@@ -166,6 +171,9 @@ class FileCRUD:
         
         user_id = await self._get_user_id_from_token(token) 
         file = await self.get_file_metadata(token, file_id)
+        
+        if not file:
+            raise exceptions.FileWasNotFound
        
         new_abs_path = await self._rename_file(file_id, user_id, file_in, file)
         file_in.file_path = new_abs_path
@@ -220,8 +228,8 @@ class FileCRUD:
                 os.remove(file_path)
                 await self._delete_file_db(user_id, file_path)
                 return {"Message": f"File {file_path} was deleted by user {user_id} successfully"}
-            
-            return {"Message": f"File {file_id} does not exist"}        
+             
+            raise exceptions.FileWasNotFound
 
         except Exception as e:
             logger.opt(exception=e).critical("Error in delete_file")

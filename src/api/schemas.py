@@ -12,6 +12,7 @@ class FileBase(BaseModel):
 
 
 class CreateFile(FileBase):
+    id: str
     pass    
 
 class UpdateFile(FileBase):
@@ -27,3 +28,22 @@ class FileGet(FileBase):
     
     class Config:
         from_attributes = True
+        
+class UploadResponse(BaseModel):
+    success: bool = False
+    message: str = "Failed"
+    response: list[FileGet]
+    
+class MetadataResponse(BaseModel):
+    success: bool = False
+    message: str = "Failed"
+    response: FileGet
+
+class UpdateResponse(BaseModel):
+    success: bool = False
+    message: str = "Failed"
+    response: FileGet
+
+class DeleteResponse(BaseModel):
+    success: bool = False
+    message: str = "Failed"

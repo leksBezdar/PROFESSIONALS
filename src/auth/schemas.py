@@ -54,7 +54,6 @@ class RefreshTokenUpdate(RefreshTokenCreate):
 class Token(BaseModel):
     access_token: str
     refresh_token: UUID
-    token_type: str
     
     
 class LoginIn(BaseModel):
@@ -64,3 +63,12 @@ class LoginIn(BaseModel):
 class LoginResponse(BaseModel):
     user: UserGet
     tokens: Token
+    
+class RegResponse(BaseModel):
+    success: bool = False
+    message: str = "Failed"
+    response: UserGet
+    
+class LogResponse(LoginResponse):
+    success: bool = False
+    message: str = "Failed"
