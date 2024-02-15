@@ -2,23 +2,23 @@ version: "3.7"
 
 services:
   db:
-    image: postgres:15
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: postgres
     container_name: db_app
-    command: -p 1221
-    expose:
-      - 1221
+    ports:
+      - "1221:1221"
     env_file:
       - .env
+
   app:
     build:
       context: .
     env_file:
       - .env
     container_name: fastapi_app
-    command: gunicorn src.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker
-    volumes:
-      - /!uploads:локальный_путь_файлов_в_контейнере
+    command: gunicorn -b 0.0.0.0:8000 src.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker
     ports:
-      - 9999:8000
+      - "9999:8000"
     depends_on:
       - db
