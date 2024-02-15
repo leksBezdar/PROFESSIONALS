@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
     container_name: db_app
     ports:
-      - "1221:1221"
+      - "5432:5432"
     env_file:
       - .env
 
