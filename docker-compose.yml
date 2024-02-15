@@ -3,7 +3,16 @@ version: "3.7"
 services:
   db:
     image: postgres:latest
+    image: postgres:latest
     container_name: db_app
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: rest_api
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     environment:
@@ -22,6 +31,7 @@ services:
     volumes:
       - ./../upload_files:/root/projects/upload_files
     ports:
+      - "9999:8000"
       - "9999:8000"
     depends_on:
       - db
