@@ -3,22 +3,26 @@ version: "3.7"
 services:
   db:
     image: postgres:latest
-    environment:
-      POSTGRES_PASSWORD: postgres
     container_name: db_app
     ports:
-      - "5432:5432"
-    env_file:
-      - .env
-
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: rest_api
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
   app:
     build:
       context: .
     env_file:
       - .env
     container_name: fastapi_app
+    command: alembic upgrade head 
     command: gunicorn -b 0.0.0.0:8000 src.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker
     ports:
       - "9999:8000"
     depends_on:
       - db
+volumes:
+  postgres-data:
